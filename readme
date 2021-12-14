@@ -1,0 +1,60 @@
+#PASO 1 CREAR DockerFile
+# syntax=docker/dockerfile:1
+FROM python:3
+ENV PYTHONUNBUFFERED=1
+WORKDIR /code
+COPY requirements.txt /code/
+RUN pip install -r requirements.txt
+COPY . /code/
+
+
+#PASO 2 CREAR docker-compose.yml
+version: '3.9'
+services:
+  base_db:
+    image: mysql:5.7
+    ports:
+      - "33306:3306"
+    environment:
+      MYSQL_DATABASE: dba_base
+      MYSQL_USER: base
+      MYSQL_PASSWORD: base
+      MYSQL_ROOT_PASSWORD: base
+    volumes:
+      - ./data_mysql:/var/lib/mysql
+  base_django:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/my_app_django_dir
+    ports:
+      - "8001:8000"
+    depends_on:
+      - base_db
+
+
+#PASO 3 CREAR PROYECTO
+#sudo docker-compose run base_django django-admin startproject base_drf .
+sudo docker-compose run --rm base_django django-admin startproject base_drf .
+
+
+#PASO  4 SUBIR 
+docker-compose up
+#SUBIR DOCKER Y QUE QUEDE EN SEGUNDO
+docker-compose up -d
+
+#SI AGREGO ALGO EN requirements.txt DEBO HACER UN BUILD
+docker-compose build
+
+#realizar migrations
+sudo docker-compose run --rm base_django python manage.py makemigrations
+#realizar migrations
+sudo docker-compose run --rm base_django python manage.py migrate
+#CREAR SUPER USUARIO
+sudo docker-compose run --rm base_django python manage.py createsuperuser
+#CREAR APP
+sudo docker-compose run --rm base_django python manage.py startapp infraestructura
+
+
+
+
